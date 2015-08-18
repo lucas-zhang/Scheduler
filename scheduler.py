@@ -102,7 +102,6 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
     
 
     firstName = row[fNameColInd]
-    print(firstName)
     lastName = row[lNameColInd]
     tourTimes = []
 
@@ -136,6 +135,7 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
   return tourGuides
 
 def main():
+  print('The python version we\'re using is ' + sys.version)
   file_string = sys.argv[1];
   data = readFile(file_string)
   tourGuides = getTourGuides(data)
