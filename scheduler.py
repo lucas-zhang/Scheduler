@@ -11,8 +11,40 @@ class TourGuide:
     self.lastName = lastName
     self.tourTimes = tourTimes
 
+
+  def __repr__(self):
+    #for nice formatting when you print it
+    return self.jsonishPrint()
+
+  def normalPrint(self):
+    return self.getFullName() + ': ' + str([tourTime for tourTime in self.tourTimes if tourTime])
+
+  def jsonishPrint(self):
+    tourTimesString = ''
+    for i, tourTime in enumerate(self.tourTimes):
+      if tourTime:
+        tourTimesString += (str(tourTime)) 
+      
+        tourTimesString += '\n'
+        if i != self.countTourTimes() - 1:
+          tourTimesString += '    '
+
+      
+    if tourTimesString == '':
+      return '{' + '\n' + '    ' + 'Name: ' + self.getFullName() + '\n' + tourTimesString + '}'
+
+    return '{' + '\n' + '    ' + 'Name: ' + self.getFullName() + '\n' + '    ' + tourTimesString + '}'
+
+
   def getFullName(self):
-    return self.firstName + ' ' + self.lastName
+    return self.firstName + ' ' + self.lastName 
+
+  def countTourTimes(self):
+    count = 0
+    for tourTime in self.tourTimes:
+      if tourTime:
+        count += 1
+    return count
 
 class TourTime:
   def __init__(self, day, hour, minute, isAM): 
@@ -28,6 +60,11 @@ class TourTime:
 
   def __ne__(self, other):
     return not self.__dict__ == other.__dict__
+
+  def __repr__(self):
+    reverseDayMappings = {1:'Monday', 2: 'Tuesday', 3: 'Wednesday', 4:'Thursday', 5:'Friday', 6:'Saturday', 7:'Sunday'}
+    am_pmMappings = {True: 'AM', False: 'PM'}
+    return reverseDayMappings[self.day] + ' ' + str(self.hour) + ':' + "{0:0=2d}".format(self.minute) + ' ' + am_pmMappings[self.isAM]
   
 
 """ 
@@ -50,6 +87,7 @@ def readFile(file_string):
       data.append(row)
 
   f.close()
+  print(len(data))
   return data
 
 def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firstPrefInd = 13, numPref = 5):
@@ -64,6 +102,7 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
     
 
     firstName = row[fNameColInd]
+    print(firstName)
     lastName = row[lNameColInd]
     tourTimes = []
 
@@ -80,7 +119,6 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
       dayString = col.split(' ', 1)[0].strip()
       timeString = col[col.index('(') + 1: col.rindex(')')].strip() # "11:00 AM"
 
-      print(firstName + ' ' + lastName + ': ' + dayString + ', ' + timeString)
       timeStringArray = timeString.split(':', 1) #An array with elements of strings before and after colon i.e. ['11', '00 AM']
       afterColonArray = timeStringArray[1].split(' ', 1) #An array with elements of strings after the colon i.e. ['00', 'AM']
 
@@ -94,16 +132,18 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
     tourGuides.append(TourGuide(firstName, lastName, tourTimes))
 
     i += 1
+
   return tourGuides
 
 def main():
   file_string = sys.argv[1];
   data = readFile(file_string)
   tourGuides = getTourGuides(data)
-
+  tourGuides.sort(key= lambda tourGuide: tourGuide.countTourTimes())
   for tourGuide in tourGuides:
-    print(tourGuide.firstName, tourGuide.lastName,  [(tourTime.day, tourTime.hour, tourTime.minute, tourTime.isAM) for tourTime in tourGuide.tourTimes if tourTime])
+    print(tourGuide)
     print('\n')
+
 
 if __name__ ==  '__main__':
   main()
