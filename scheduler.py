@@ -1,6 +1,18 @@
 import csv
 import sys
 
+
+class Assignment:
+  #Similar to tourguide object, but it now has one assigned tourtime
+  def __init__(self, firstName, lastName, assignedTourTime):
+    #tourTimes is a list of TourTime objects
+    self.firstName = firstName
+    self.lastName = lastName
+    self.assignedTourTime = assignedTourTime
+
+  def __repr__(self):
+    return '{\n        Assignment\n\n    Name: ' + self.firstName + ' ' + self.lastName + '\n    ' + 'Time: ' + str(self.assignedTourTime) + '\n\n}'
+
 class TourGuide:
   def __init__(self, firstName, lastName, tourTimes):
     #tourTimes is a list of TourTime objects
@@ -28,9 +40,9 @@ class TourGuide:
 
       
     if tourTimesString == '':
-      return '{' + '\n' + '    ' + 'Name: ' + self.getFullName() + '\n' + tourTimesString + '}'
+      return '{\n    ' + 'Name: ' + self.getFullName() + '\n' + tourTimesString + '}'
 
-    return '{' + '\n' + '    ' + 'Name: ' + self.getFullName() + '\n' + '    ' + tourTimesString + '}'
+    return '{\n    ' + 'Name: ' + self.getFullName() + '\n    ' + tourTimesString + '}'
 
 
   def getFullName(self):
@@ -54,6 +66,9 @@ class TourTime:
   # TourTime equals and not equals methods below
   def __eq__(self, other):
     return self.__dict__ == other.__dict__
+
+  def __hash__(self):
+    return hash((self.day, self.hour, self.minute, self.isAM))
 
   def __ne__(self, other):
     return not self.__dict__ == other.__dict__
@@ -131,15 +146,85 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
 
   return tourGuides
 
+def getPreferenceGroups (tourGuides, numPrefCols = 5):
+  #prefGroups is an array of arrays that stores an array of tourGuide objects at each index corresponding to 
+  #the tourGuides amount of preferences. For example all tourGuides with 2 preferences will be at index 2
+
+  prefGroups = [None] * (numPrefCols + 1)
+  for tourGuide in tourGuides:
+    numTourGuidePref = tourGuide.countTourTimes()
+
+    if not prefGroups[numTourGuidePref]:
+      prefGroups[numTourGuidePref] = []
+
+    prefGroups[numTourGuidePref].append(tourGuide)
+
+    return prefGroups
+
+
+def getSortedTourTimeFrequencies(prefGroup):
+  countsDict = {} #dictionary mapping tourTime objects to their counts
+  for tourGuide in prefGroup:
+    for tourTime in tourGuide.tourTimes:
+      if tourTime:
+        if tourTime in countsDict:
+          countsDict[tourTime] += 1
+        else:
+          countsDict[tourTime] = 1
+
+  countsArray = countsDict.items() #counts array is a list of tuples [(TourTime object, count)]
+  countsArray.sort(key = lambda x: x[1]) #sorts
+  return countsArray
+
+def getTourTimeToGuideMapping(prefGroup):
+  #generates a dictionary mapping a TourTime to tuples with a TourGuide and its pref number who have the TourTime listed as a preference
+  timeToGuideDict = {} 
+  for tourGuide in prefGroup:
+    for i, tourTime in enumerate(tourGuide.tourTimes):
+      if tourTime:
+        if tourTime not in timeToGuideDict:
+          timeToGuideDict[tourTime] = []
+        timeToGuideDict[tourTime].append((tourGuide, i + 1))
+
+  return tourTimeGuideMapping
+          
+
+def generateAssignments(prefGroups):
+  assignments = [] #list of assignment objects
+  for prefGroup in prefGroups:
+    sortedFrequencyTuples = getSortedTourTimeFrequencies(prefGroup)
+    timeToGuideDict = getTourTimeToGuideMapping(prefGroup)
+
+    for (tourTime, frequency) in sortedFrequencyTuples:
+      guidePreferenceTuples = timeToGuideDict[tourTime] #list of tuples (TourGuide, Preference number)
+
+      if len(guidePreferenceTuples) == 1: #if there's only one person that wants this TourTime in this prefGroup
+        selTourGuide = guidePreferenceTuples[0][0]
+        curr_assignment = Assignment(selTourGuide.firstName, selTourGuide.lastName, tourTime)
+        
+
+      else: #if there are multiple people that want this tourtime
+        for (tourGuide, prefNumber) in guidePreferenceTuples:
+
+
+
+
+      assignments.append(curr_assignment)
+
+
+
+
+
+
 def main():
   print('The python version we\'re using is ' + sys.version)
   file_string = sys.argv[1];
   data = readFile(file_string)
   tourGuides = getTourGuides(data)
-  tourGuides.sort(key= lambda tourGuide: tourGuide.countTourTimes())
-  for tourGuide in tourGuides:
-    print(tourGuide)
-    print('\n')
+  print(Assignment('Lucas', 'Zhang', TourTime(1, 11, 0, 1)))
+  prefGroups = getPreferenceGroups(tourGuides)
+
+
 
 
 if __name__ ==  '__main__':
