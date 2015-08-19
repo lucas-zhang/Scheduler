@@ -1,5 +1,6 @@
 import csv
 import sys
+import random
 
 
 class Assignment:
@@ -99,7 +100,6 @@ def readFile(file_string):
       data.append(row)
 
   f.close()
-  print(len(data))
   return data
 
 def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firstPrefInd = 13, numPref = 5):
@@ -159,10 +159,11 @@ def getPreferenceGroups (tourGuides, numPrefCols = 5):
 
     prefGroups[numTourGuidePref].append(tourGuide)
 
-    return prefGroups
+  return prefGroups
 
 
-def getSortedTourTimeFrequencies(prefGroup):
+def getSortedTourTimesByFreq(prefGroup):
+  #Gets tourtimes sorted by frequency, but with duplicates
   countsDict = {} #dictionary mapping tourTime objects to their counts
   for tourGuide in prefGroup:
     for tourTime in tourGuide.tourTimes:
@@ -174,7 +175,14 @@ def getSortedTourTimeFrequencies(prefGroup):
 
   countsArray = countsDict.items() #counts array is a list of tuples [(TourTime object, count)]
   countsArray.sort(key = lambda x: x[1]) #sorts
-  return countsArray
+
+
+  sortedTourTimes = []
+  for (tourTime, count) in countsArray:
+    for i in range(count):
+      sortedTourTimes.append(tourTime)
+
+  return sortedTourTimes
 
 def getTourTimeToGuideMapping(prefGroup):
   #generates a dictionary mapping a TourTime to tuples with a TourGuide and its pref number who have the TourTime listed as a preference
@@ -186,30 +194,52 @@ def getTourTimeToGuideMapping(prefGroup):
           timeToGuideDict[tourTime] = []
         timeToGuideDict[tourTime].append((tourGuide, i + 1))
 
-  return tourTimeGuideMapping
-          
+  return timeToGuideDict
 
-def generateAssignments(prefGroups):
+
+def chooseRandomly(collection):
+  numItems = len(collection)
+  chosen_index = random.randint(0, numItems - 1)
+
+  return collection[chosen_index]
+
+
+
+def generateAssignments(prefGroups, distribution = None):
+  #distribution is a dictionary mapping a tourtime object
   assignments = [] #list of assignment objects
-  for prefGroup in prefGroups:
-    sortedFrequencyTuples = getSortedTourTimeFrequencies(prefGroup)
+  tourGuidesNotAssigned = prefGroups[0]
+  assigned = set([]) #set of assigned tourGuides
+  for prefGroupNum, prefGroup in enumerate(prefGroups):
+    if not prefGroup:
+      continue
+
+    sortedTourTimes = getSortedTourTimesByFreq(prefGroup)
     timeToGuideDict = getTourTimeToGuideMapping(prefGroup)
 
-    for (tourTime, frequency) in sortedFrequencyTuples:
-      guidePreferenceTuples = timeToGuideDict[tourTime] #list of tuples (TourGuide, Preference number)
+    for tourTime in sortedTourTimes: #sorted by frequency
+      guidePrefTuples = [(tourGuide, prefNum) for (tourGuide, prefNum) in timeToGuideDict[tourTime] if tourGuide not in assigned] #list of tuples (TourGuide, Preference number)
 
-      if len(guidePreferenceTuples) == 1: #if there's only one person that wants this TourTime in this prefGroup
-        selTourGuide = guidePreferenceTuples[0][0]
-        curr_assignment = Assignment(selTourGuide.firstName, selTourGuide.lastName, tourTime)
+      if len(guidePrefTuples) == 0:
+        continue
+      if len(guidePrefTuples) == 1: #if there's only one person that wants this TourTime in this prefGroup
+        selTourGuide = guidePrefTuples[0][0]
         
-
       else: #if there are multiple people that want this tourtime
-        for (tourGuide, prefNumber) in guidePreferenceTuples:
 
+        minPrefNum = min(guidePrefTuples, key = lambda x: x[1])[1]
+        highestPrefGuides = [tourGuide for (tourGuide, prefNum) in guidePrefTuples if prefNum == minPrefNum] #List of tuples with only the TourGuides with highest preference for this TourTime
 
+        if len(highestPrefGuides) == 1: #if there are no preference ties
+          selTourGuide = highestPrefGuides[0]
 
+        else:
+          selTourGuide = chooseRandomly(highestPrefGuides)
 
-      assignments.append(curr_assignment)
+      assigned.add(selTourGuide)
+      assignments.append(Assignment(selTourGuide.firstName, selTourGuide.lastName, tourTime))
+
+  return (assignments, tourGuidesNotAssigned)
 
 
 
@@ -221,8 +251,20 @@ def main():
   file_string = sys.argv[1];
   data = readFile(file_string)
   tourGuides = getTourGuides(data)
-  print(Assignment('Lucas', 'Zhang', TourTime(1, 11, 0, 1)))
+
   prefGroups = getPreferenceGroups(tourGuides)
+  assignments, unassigned = generateAssignments(prefGroups)
+
+  for assignment in assignments:
+    print (assignment)
+
+  print ('We found a schedule with ' + str(len(assignments)) + ' assignments. They are listed above.\n\n')
+
+  print('\nThere were ' + str(len(unassigned)) + ' unassigned tour guides. They are listed below.\n')
+  for tourGuide in unassigned:
+    print(tourGuide)
+
+  
 
 
 
