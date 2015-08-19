@@ -2,7 +2,6 @@ import csv
 import sys
 import random
 
-
 class Assignment:
   #Similar to tourguide object, but it now has one assigned tourtime
   def __init__(self, firstName, lastName, assignedTourTime):
@@ -20,7 +19,6 @@ class TourGuide:
     self.firstName = firstName
     self.lastName = lastName
     self.tourTimes = tourTimes
-
 
   def __repr__(self):
     #for nice formatting when you print it
@@ -79,7 +77,6 @@ class TourTime:
     am_pmMappings = {True: 'AM', False: 'PM'}
     return reverseDayMappings[self.day] + ' ' + str(self.hour) + ':' + "{0:0=2d}".format(self.minute) + ' ' + am_pmMappings[self.isAM]
   
-
 """ 
   *** Indices are 0 based *** 
 
@@ -102,6 +99,7 @@ def readFile(file_string):
   f.close()
   return data
 
+
 def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firstPrefInd = 13, numPref = 5):
   # Will return a list of TourGuide objects
   tourGuides = []
@@ -110,9 +108,6 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
 
   for i in range(startRowInd, len(data)):
     row = data[i]
-
-    
-
     firstName = row[fNameColInd]
     lastName = row[lNameColInd]
     tourTimes = []
@@ -122,11 +117,9 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
       #print("The col string is: " + col)
       #print(i,j)
       if len(col) == 0 or (col.split(' ', 1)[0].strip() not in dayMappings.keys()): #if blank preference or not a tour date (i.e. studying abroad) 
-
         tourTimes.append(None) #optional line, only needed if we need to keep track of the number of preference
         continue
 
-      
       dayString = col.split(' ', 1)[0].strip()
       timeString = col[col.index('(') + 1: col.rindex(')')].strip() # "11:00 AM"
 
@@ -136,7 +129,6 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
       hourString = timeStringArray[0].strip()
       minuteString = afterColonArray[0].strip()
       am_pm = afterColonArray[1].strip() #String either "AM" or "PM"
-
 
       tourTimes.append(TourTime(dayMappings[dayString], int(hourString), int(minuteString), am_pm.strip() == 'AM'))
 
@@ -176,13 +168,13 @@ def getSortedTourTimesByFreq(prefGroup):
   countsArray = countsDict.items() #counts array is a list of tuples [(TourTime object, count)]
   countsArray.sort(key = lambda x: x[1]) #sorts
 
-
   sortedTourTimes = []
   for (tourTime, count) in countsArray:
     for i in range(count):
       sortedTourTimes.append(tourTime)
 
   return sortedTourTimes
+
 
 def getTourTimeToGuideMapping(prefGroup):
   #generates a dictionary mapping a TourTime to tuples with a TourGuide and its pref number who have the TourTime listed as a preference
@@ -200,9 +192,7 @@ def getTourTimeToGuideMapping(prefGroup):
 def chooseRandomly(collection):
   numItems = len(collection)
   chosen_index = random.randint(0, numItems - 1)
-
   return collection[chosen_index]
-
 
 
 def generateAssignments(prefGroups, distribution = None):
@@ -210,6 +200,7 @@ def generateAssignments(prefGroups, distribution = None):
   assignments = [] #list of assignment objects
   tourGuidesNotAssigned = prefGroups[0]
   assigned = set([]) #set of assigned tourGuides
+
   for prefGroupNum, prefGroup in enumerate(prefGroups):
     if not prefGroup:
       continue
@@ -242,10 +233,6 @@ def generateAssignments(prefGroups, distribution = None):
   return (assignments, tourGuidesNotAssigned)
 
 
-
-
-
-
 def main():
   print('The python version we\'re using is ' + sys.version)
   file_string = sys.argv[1];
@@ -264,14 +251,6 @@ def main():
   for tourGuide in unassigned:
     print(tourGuide)
 
-  
-
-
-
 
 if __name__ ==  '__main__':
   main()
-
-
-
-
