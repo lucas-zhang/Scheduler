@@ -1,6 +1,7 @@
 import csv
 import sys
 import random
+import json
 
 class Assignment:
   #Similar to tourguide object, but it now has one assigned tourtime
@@ -88,7 +89,7 @@ class TourTime:
 """
 
 
-def readFile(file_string):
+def readCSVFile(file_string):
   data = []
   with open (file_string, 'rU') as f:
     reader = csv.reader(f.read().splitlines())
@@ -99,8 +100,22 @@ def readFile(file_string):
   f.close()
   return data
 
+def readJSONFile(file_string):
+  """JSON file should include: startRowInd, fNameColInd, lNameColInd, firstPrefColInd, numPrefCols 
+     margin, leaveUnassigned, ideal_dist, outputTourNames
+  """
+  with open(file_string) as json_file:
+    jsonConfig = json.load(json_file)
+  json_file.close()
 
-def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firstPrefInd = 13, numPref = 5):
+  return jsonConfig
+
+
+
+
+
+
+def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firstPrefColInd = 13, numPrefCols = 5):
   # Will return a list of TourGuide objects
   tourGuides = []
   dayMappings = {'Monday': 1, 'Tuesday' : 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6, 'Sunday': 7}
@@ -112,7 +127,7 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
     lastName = row[lNameColInd]
     tourTimes = []
 
-    for j in range(firstPrefInd, firstPrefInd + numPref):
+    for j in range(firstPrefColInd, firstPrefColInd + numPrefCols):
       col = row[j].strip() # A string of the first preference. For example "Saturday Morning Tour (11:00 AM)"
       #print("The col string is: " + col)
       #print(i,j)
@@ -133,10 +148,19 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
       tourTimes.append(TourTime(dayMappings[dayString], int(hourString), int(minuteString), am_pm.strip() == 'AM'))
 
     tourGuides.append(TourGuide(firstName, lastName, tourTimes))
-
     i += 1
 
   return tourGuides
+
+def getAllTourTimes(tourGuides):
+  tourTimes = set([])
+  for tourGuide in tourGuides:
+    for tourTime in tourGuide.tourTimes:
+      if tourTime not in tourTimes:
+        tourTimes.add(tourTime)
+
+  return tourTimes
+
 
 def getPreferenceGroups (tourGuides, numPrefCols = 5):
   #prefGroups is an array of arrays that stores an array of tourGuide objects at each index corresponding to 
@@ -195,8 +219,42 @@ def chooseRandomly(collection):
   return collection[chosen_index]
 
 
-def generateAssignments(prefGroups, distribution = None):
-  #distribution is a dictionary mapping a tourtime object
+def getLeastFullTime(tourGuide, curr_dist, ideal_dist):
+  """ Gets the most available time of a TourGuide based off the most availabe spots left according 
+      ideal_dist
+  """
+  timeDiffTuples = [(tourTime, ideal_dist[tourTime] - curr_dist[tourTime]) for tourTime in tourGuide.tourTimes]
+  max_diff = max(timeDiffTuples, key = lambda t: t[1])[1]
+  leastFull = [tourTime for (tourTime, diff) in timeDiffTuples if diff == max_diff]
+
+  return chooseRandomly(leastFull)
+
+
+def handleUnassigned(prefGroup, leaveUnassigned, assigned, tourGuidesNotAssigned, curr_dist, ideal_dist):
+  for tourGuide in prefGroup:
+    if tourGuide not in assigned:
+      if leaveUnassigned:
+        tourGuidesNotAssigned.append(tourGuide)
+      else:
+        selTourTime = getLeastFullTime(tourGuide, curr_dist, ideal_dist)
+        assigned.add(tourGuide)
+        assignments.append(Assignment(tourGuide.firstName, tourGuide.lastName, selTourTime))
+        curr_dist[selTourTime] += 1
+
+  return (assigned, tourGuidesNotAssigned, curr_dist)
+
+
+def generateAssignments(prefGroups, curr_dist, margin = 0, leaveUnassigned = True, ideal_dist = {}):
+  """
+    margin is the amount we can go over distribution
+    ideal_dist is a dictionary mapping a tourtime object
+
+    leaveUnassigned is a boolean indicating whether or not to assign unassigned tourguides at 
+    the end of each pref group. If leaveUnassigned is false, we'll assign each unassigned tourGuide
+    at the end to a tourtime to the tourtime with the most available spots (ideal_dist - curr_dist)
+
+  """
+
   assignments = [] #list of assignment objects
   tourGuidesNotAssigned = prefGroups[0]
   assigned = set([]) #set of assigned tourGuides
@@ -205,42 +263,71 @@ def generateAssignments(prefGroups, distribution = None):
     if not prefGroup:
       continue
 
+    if prefGroupNum == 0:
+      continue
+
     sortedTourTimes = getSortedTourTimesByFreq(prefGroup)
     timeToGuideDict = getTourTimeToGuideMapping(prefGroup)
 
     for tourTime in sortedTourTimes: #sorted by frequency
+      if curr_dist[tourTime] >= (ideal_dist[tourTime] + margin):
+        continue
+
       guidePrefTuples = [(tourGuide, prefNum) for (tourGuide, prefNum) in timeToGuideDict[tourTime] if tourGuide not in assigned] #list of tuples (TourGuide, Preference number)
 
-      if len(guidePrefTuples) == 0:
+      if len(guidePrefTuples) == 0: #if there are no unassigned tourguides that want this tourtime
         continue
-      if len(guidePrefTuples) == 1: #if there's only one person that wants this TourTime in this prefGroup
-        selTourGuide = guidePrefTuples[0][0]
-        
-      else: #if there are multiple people that want this tourtime
 
-        minPrefNum = min(guidePrefTuples, key = lambda x: x[1])[1]
-        highestPrefGuides = [tourGuide for (tourGuide, prefNum) in guidePrefTuples if prefNum == minPrefNum] #List of tuples with only the TourGuides with highest preference for this TourTime
+      #if there are one or more unassigned tourguides that want this tourtime
+      minPrefNum = min(guidePrefTuples, key = lambda x: x[1])[1]
+      highestPrefGuides = [tourGuide for (tourGuide, prefNum) in guidePrefTuples if prefNum == minPrefNum] #List of tuples with only the TourGuides with highest preference for this TourTime
 
-        if len(highestPrefGuides) == 1: #if there are no preference ties
-          selTourGuide = highestPrefGuides[0]
+      if len(highestPrefGuides) == 1: #if there are no preference ties
+        selTourGuide = highestPrefGuides[0]
 
-        else:
-          selTourGuide = chooseRandomly(highestPrefGuides)
+      else:
+        selTourGuide = chooseRandomly(highestPrefGuides)
 
       assigned.add(selTourGuide)
       assignments.append(Assignment(selTourGuide.firstName, selTourGuide.lastName, tourTime))
+      curr_dist[selTourTime] += 1
+
+    assigned, tourGuidesNotAssigned, curr_dist = handleUnassigned(prefGroup, leaveUnassigned, assigned, \
+                                                                  tourGuidesNotAssigned, curr_dist, ideal_dist)
+
+
+
+
+
 
   return (assignments, tourGuidesNotAssigned)
 
 
-def main():
-  print('The python version we\'re using is ' + sys.version)
-  file_string = sys.argv[1];
-  data = readFile(file_string)
-  tourGuides = getTourGuides(data)
+def generateOutputData(assignments, unassigned):
+  return
+def outputToCSV(file_string, outputData):
+  with open (file_string, 'w') as f:
+    writer = csv.writer(f)
+    writer.writerows(outputData)
 
+
+  f.close()
+  return
+
+
+
+def main():
+  input_csv_string = sys.argv[1]
+  json_file_string = sys.argv[2]
+  output_csv_string = sys.argv[3]
+
+
+  data = readCSVFile(input_csv_string)
+  tourGuides = getTourGuides(data)
   prefGroups = getPreferenceGroups(tourGuides)
-  assignments, unassigned = generateAssignments(prefGroups)
+  tourTimes = getAllTourTimes(tourGuides) # a set
+  curr_dist = dict.fromkeys(tourTimes, 0)
+  assignments, unassigned = generateAssignments(prefGroups, 0, True, curr_dist, ideal_dist)
 
   for assignment in assignments:
     print (assignment)
