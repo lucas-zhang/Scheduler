@@ -10,93 +10,13 @@
   "leaveUnassigned": true,
 
   "tour_times": [
-    {
-      "title": "Foggy Bottom",
+    { 
+      "eventName": "Foggy Bottom",
       "day": "Monday",
       "hour": 11,
       "minute": 0,
       "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
-    }
-    {
-      "title": "Foggy Bottom",
-      "day": "Monday",
-      "hour": 11,
-      "minute": 0,
-      "isAM": true,
-      "idealDist": 7
+      "maxAssigned": 7
     }
   ]
 

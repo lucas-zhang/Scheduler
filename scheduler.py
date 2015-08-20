@@ -2,6 +2,7 @@ import csv
 import sys
 import random
 import json
+import re
 
 class Assignment:
   #Similar to tourguide object, but it now has one assigned tourtime
@@ -20,6 +21,7 @@ class TourGuide:
     self.firstName = firstName
     self.lastName = lastName
     self.tourTimes = tourTimes
+
 
   def __repr__(self):
     #for nice formatting when you print it
@@ -56,12 +58,15 @@ class TourGuide:
     return count
 
 class TourTime:
-  def __init__(self, day, hour, minute, isAM): 
+  def __init__(self,eventName, day, hour, minute, isAM, maxAssigned, currAssigned): 
     #Day is numbered 1-7; 1 being monday, isAM is true if it's am, false if pm
+    self.name = name
     self.day = day
     self.hour = hour
     self.minute = minute
     self.isAM = isAM
+    self.maxAssigned = maxAssigned
+    self.currAssigned = currAssigned
 
   # TourTime equals and not equals methods below
   def __eq__(self, other):
@@ -112,15 +117,53 @@ def readJSONFile(file_string):
 
 
 
+def parsePrefCol(col):
+  """Gets the day, hour, minute, and am/pm of the string in csv preference column"""
+
+  if col:
+    col = col.strip()
+    dayMappings = {'MONDAY': 1, 'TUESDAY' : 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6, 'SUNDAY': 7}
+
+    timePattern = "(?i)([0-9]|0[0-9]|1[0-9]|2[0-3])\s*:\s*([0-5][0-9])\s*(AM|PM)"
+    dayPattern = "(?i)Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday"
+
+    dayMatch = re.search(dayPattern, col)
+    timeMatch = re.search(timePattern, col)
+
+    if not dayMatch or not timeMatch:
+      return None
+
+    day = dayMappings[dayMatch.group().upper()]
+    hour = int(timeMatch.groups()[0])
+    minute = int(timeMatch.groups()[1])
+    isAM = timeMatch.groups()[2].upper()
+
+    return (day, hour, minute, isAM)
 
 
+  else:
+    return None
+def createDistAndNameDict(jsonTimeObjects):
+  #a jsonTimeObject are similar but NOT the same as tourtime objects
 
-def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firstPrefColInd = 13, numPrefCols = 5):
+  distDict = {} #distDict maps (day, hour, minute, isAM) to (eventName, maxAssigned)  value for a time
+
+  for jsonTimeObject in jsonTimeObjects:
+    day = jsonTimeObject['day']
+    hour = jsonTimeObject['hour']
+    minute = jsonTimeObject['minute']
+    isAM = jsonTimeObject['isAM']
+    maxAssigned = jsonTimeObject['maxAssigned']
+    eventName = jsonTimeObject['eventName']
+    distDict[(day, hour, minute, isAM)] = maxAssigned
+
+  return distDict
+
+
+def getTourGuides(data, distDict, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firstPrefColInd = 13, numPrefCols = 5):
   # Will return a list of TourGuide objects
   tourGuides = []
-  dayMappings = {'Monday': 1, 'Tuesday' : 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6, 'Sunday': 7}
-
-
+  
   for i in range(startRowInd, len(data)):
     row = data[i]
     firstName = row[fNameColInd]
@@ -128,24 +171,11 @@ def getTourGuides(data, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firs
     tourTimes = []
 
     for j in range(firstPrefColInd, firstPrefColInd + numPrefCols):
-      col = row[j].strip() # A string of the first preference. For example "Saturday Morning Tour (11:00 AM)"
-      #print("The col string is: " + col)
-      #print(i,j)
-      if len(col) == 0 or (col.split(' ', 1)[0].strip() not in dayMappings.keys()): #if blank preference or not a tour date (i.e. studying abroad) 
-        tourTimes.append(None) #optional line, only needed if we need to keep track of the number of preference
-        continue
-
-      dayString = col.split(' ', 1)[0].strip()
-      timeString = col[col.index('(') + 1: col.rindex(')')].strip() # "11:00 AM"
-
-      timeStringArray = timeString.split(':', 1) #An array with elements of strings before and after colon i.e. ['11', '00 AM']
-      afterColonArray = timeStringArray[1].split(' ', 1) #An array with elements of strings after the colon i.e. ['00', 'AM']
-
-      hourString = timeStringArray[0].strip()
-      minuteString = afterColonArray[0].strip()
-      am_pm = afterColonArray[1].strip() #String either "AM" or "PM"
-
-      tourTimes.append(TourTime(dayMappings[dayString], int(hourString), int(minuteString), am_pm.strip() == 'AM'))
+      col = row[j]# A string of the first preference. For example "Saturday Morning Tour (11:00 AM)"
+      day, hour, minute, isAM = parsePrefCol(col)
+      maxAssigned = distDict[(day, hour, minute, isAM)]
+      currAssigned = 0
+      tourTimes.append(TourTime(day, hour, minute, isAM, maxAssigned, currAssigned))
 
     tourGuides.append(TourGuide(firstName, lastName, tourTimes))
     i += 1
@@ -244,7 +274,7 @@ def handleUnassigned(prefGroup, leaveUnassigned, assigned, tourGuidesNotAssigned
   return (assigned, tourGuidesNotAssigned, curr_dist)
 
 
-def generateAssignments(prefGroups, curr_dist, margin = 0, leaveUnassigned = True, ideal_dist = {}):
+def generateAssignments(prefGroups, curr_dist, margin = 0, leaveUnassigned = True, ideal_dist = None):
   """
     margin is the amount we can go over distribution
     ideal_dist is a dictionary mapping a tourtime object
@@ -323,20 +353,16 @@ def main():
 
 
   data = readCSVFile(input_csv_string)
+  jsonConfigDict = readJSONFile(json_file_string)
+
+  distDict = createDistDict(jsonConfigDict['tour_times'])
+
   tourGuides = getTourGuides(data)
   prefGroups = getPreferenceGroups(tourGuides)
   tourTimes = getAllTourTimes(tourGuides) # a set
   curr_dist = dict.fromkeys(tourTimes, 0)
   assignments, unassigned = generateAssignments(prefGroups, 0, True, curr_dist, ideal_dist)
 
-  for assignment in assignments:
-    print (assignment)
-
-  print ('We found a schedule with ' + str(len(assignments)) + ' assignments. They are listed above.\n\n')
-
-  print('\nThere were ' + str(len(unassigned)) + ' unassigned tour guides. They are listed below.\n')
-  for tourGuide in unassigned:
-    print(tourGuide)
 
 
 if __name__ ==  '__main__':
