@@ -1,5 +1,5 @@
 I. Brief Intro:
-        This script is meant to do some basic scheduling for tour guides and tour times for a week. This is very useful since generally, that week's schedule can be repeated for the whole month and months generally are the same. Currently as the script is, each tour guide must do at most one tour a week and tour times must have unique start times, which prevents issues of multiple assignment and overlapping times. I did the best I could to make the script general for this specific problem. Hopefully this script is compatible to automate your scheduling process and save you hours of manual scheduling. 
+        This script is meant to do some basic scheduling by assigning tour guides to tour times during a week. This is very useful since generally, that week's schedule can be repeated throughout the whole month and tour times do not vary much between months. Currently as the script is, each tour guide must be assigned to at most one tour per week and tour times must have unique start times, which prevents issues of multiple assignment and overlapping times. I did the best I could to make the script general for this specific problem. Hopefully this script is compatible to automate your scheduling process and save you hours of manual scheduling. 
     
 
 
@@ -12,6 +12,8 @@ II. Higher Level Overview and Algorithm Explained:
             - a preference group number refers to the amount of preferences that each tour guide within the preference group shares
 
 
+    BEGIN SCRIPT:
+
         1) Read in tour guide names, statuses, and preferences from the input .csv file with a csv reader.
 
 
@@ -20,9 +22,9 @@ II. Higher Level Overview and Algorithm Explained:
 
 
 
-        3) For each preference group in ascending order (want to schedule people with less preferences first):
+        3) For each preference group by increasing preference group number (want to schedule people with less preferences first):
             a) If the preference group number is 0: 
-                    add the preference group to an array called unassigned and continue to then next iteration
+                    add the preference group to an array called unassigned and continue to the next iteration
 
 
             b) Gather up all the preferred tour times from all tour guides within the preference group
@@ -48,11 +50,12 @@ II. Higher Level Overview and Algorithm Explained:
 
 
         5) Output the data to a csv file using a csv writer.
-
+        
+    END SCRIPT
 
 
 III. How to Use:
-        You need 3 files to run this program: 1) scheduler.py(the main script), 2) a config.json which encodes in some input options, output options, and data, and 3) a .csv file with name (not extension) of choice with the relevant problem at hand and correct relevant columns and rows that you placed in config.json. Please look at config.json as an example and make sure not to change any of the keys names in the json file, but only values. I'll also be writing a template.py file which will create a json file for you where you just have to fill in the values of the json file.
+        You need 3 files to run this program: 1) scheduler.py(the main script), 2) a config.json which encodes in some input options, output options, and data, and 3) a .csv file with name (not extension) of choice with the relevant problem at hand and correct relevant columns and rows that you placed in config.json. Please look at config.json as an example and make sure not to change any of the key names in the json file, but only values. I'll also be writing a template.py file which will create a json file where you just have to fill in the values of the json file.
 
         To run this file, make sure that scheduler.py, config.json, the .csv file as input are in the same directory. For this example let's just say the input .csv file is called input.csv. Then from terminal do the following (*** Note that the .csv you supply as the output will be overwritten if it already exists, so make sure it doesn't have anything important or that it's not in your directory in the first place. ***):
 
@@ -83,7 +86,7 @@ IV. More about your .json file:
     -sortByFirst is a boolean parameter indicating whether to sort output by first name (sortByFirst: true) or last name (sortByFirst: false) 
 
 
-    Also, I included an example with fake data called spring2015.csv file that is compatible with the config.json file, so if you're really having trouble with the json file, you can look in there also tosee how the json matches it. 
+    Also, I included an example with fake data called spring2015.csv file that is compatible with the config.json file, so if you're really having trouble with the json file, you can look in there also to see how the json matches it. 
 
 
 
