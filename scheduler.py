@@ -71,6 +71,8 @@ class TourTime:
 
   def convertToMinutes(self):
     #converts a tourtime object to seconds with Monday 12:00AM as 0
+    if self.day is None or self.hour is None or self.minute is None or self.isAM is None:
+      return sys.maxint
     hourMap = {} #maps (hour, isAM) -> hour in 24 hr time scheme
     hourMap[(12, True)] = 0
     hourMap[(12, False)] = 12
@@ -94,8 +96,12 @@ class TourTime:
   def __repr__(self):
     reverseDayMappings = {1:'Monday', 2: 'Tuesday', 3: 'Wednesday', 4:'Thursday', 5:'Friday', 6:'Saturday', 7:'Sunday'}
     am_pmMappings = {True: 'AM', False: 'PM'}
+
+    if self.day is None and self.hour is None and self.minute is None and self.isAM is None:
+      return 'Event name: ' + self.eventName + ' (You forgot to input a valid time!)'
     return reverseDayMappings[self.day] + ', ' + str(self.hour) + ':' + "{0:0=2d}".format(self.minute) + ' ' \
-          + am_pmMappings[self.isAM] + ' (' + self.eventName + ')'
+            + am_pmMappings[self.isAM] + ' (' + self.eventName + ')'
+
   
 """ 
   *** Indices are 0 based *** 
@@ -408,10 +414,10 @@ def groupGuidesByAssignment(assignments):
 
 
 
-def generateSortedTourTimeSlots(jsonTourObjects):
+def generateTourTimeSlots(jsonTourObjects):
   outputTourTimes = []
   for jsonTourObject in jsonTourObjects:
-    timeTup = parseTimeString(jsonTourObject['title'])
+    timeTup = parseTimeString(jsonTourObject['time'])
     if not timeTup:
       day, hour, minute, isAM = (None, None, None, None)
     else:
@@ -428,8 +434,7 @@ def generateUnassignedOutput(unassigned):
   #generates a list of (tourGuide name, status, unassignedReason) and sorts it
   unassignedTuples = []
   for tourGuide in unassigned:
-    unassignedTuples.append((tourGuide.getFullName(), tourGuide.status, tourGuide, unassignedReason))
-
+    unassignedTuples.append((tourGuide.getFullName(), tourGuide.status, tourGuide.unassignedReason))
 
   return unassignedTuples
 
@@ -485,7 +490,10 @@ def generateOutputRows(assignments, unassigned, sortByFirst, toursList):
 
     curr_row.append(None) #column break between unassigned and actual assigned
     for tourTimeSlot in tourTimeSlots:
-      curr_row.append(assignmentMapping[tourTimeSlot][i])
+      if tourTimeSlot in assignmentMapping and i < len(assignmentMapping[tourTimeSlot]): 
+        curr_row.append(assignmentMapping[tourTimeSlot][i])
+      else: #either the timeSlot has no assigned people to begin with or no assigned people left
+        curr_row.append(None)
 
     output_rows.append(curr_row)
 
@@ -494,15 +502,10 @@ def generateOutputRows(assignments, unassigned, sortByFirst, toursList):
 
 
     
-  
-
-
 def outputToCSV(file_string, outputData):
   with open (file_string, 'w') as f:
     writer = csv.writer(f)
     writer.writerows(outputData)
-
-
   f.close()
   return
 
@@ -533,13 +536,8 @@ def main():
   leaveUnassigned = jsonConfigDict['leaveUnassigned']
   assignments, assigned, unassigned = generateAssignments(prefGroups, currAssignCounts, margin, leaveUnassigned)
 
-
-  assignmentMapping = groupGuidesByAssignment(assignments, jsonConfigDict['sortByFirst'])
-  for k in assignmentMapping:
-    print(assignmentMapping[k])
-
-  print(checkUniqueness(assigned, unassigned))
-  print(len(assignments) + len(unassigned))
+  output_rows = generateOutputRows(assignments, unassigned, jsonConfigDict['sortByFirst'], jsonConfigDict['tours'])
+  outputToCSV(output_csv_string, output_rows)
 
 
 
