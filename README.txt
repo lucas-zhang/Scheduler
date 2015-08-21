@@ -56,8 +56,11 @@ III. How to Use:
 
         To run this file, make sure that scheduler.py, config.json, the .csv file as input are in the same directory. For this example let's just say the input .csv file is called input.csv. Then from terminal do the following (*** Note that the .csv you supply as the output will be overwritten if it already exists, so make sure it doesn't have anything important or that it's not in your directory in the first place. ***):
 
-                    $ python scheduler.py input.csv output.csv config.json
+                            $ python scheduler.py input.csv output.csv config.json
 
+        Or more generally:
+
+            $ python path_to_scheduler.py path_to_input.csv path_to_output.csv path_to_config.json
 
 
 
