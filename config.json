@@ -4,106 +4,108 @@
     "fNameColInd": 1 ,
     "lNameColInd": 2,
     "firstPrefColInd": 4,
-    "numPrefCols": 5
+    "numPrefCols": 5,
+    "statusColInd": 3
   },
   "margin": 0,
   "leaveUnassigned": true,
+  "sortByFirst": true,
 
   "tours": [
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Monday, 10:30 AM",
-      "maxAssigned": 7
+      "maxAllowed": 7
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Tuesday, 10:30 AM",
-      "maxAssigned": 7
+      "maxAllowed": 7
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Wednesday, 10:30 AM",
-      "maxAssigned": 7
+      "maxAllowed": 7
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Thursday, 10:30 AM",
-      "maxAssigned": 7
+      "maxAllowed": 7
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Friday, 10:30 AM",
-      "maxAssigned": 9
+      "maxAllowed": 9
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Saturday, 10:30 AM",
-      "maxAssigned": 9
+      "maxAllowed": 9
     },
 
 
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Monday, 2:30 PM",
-      "maxAssigned": 9
+      "maxAllowed": 9
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Tuesday, 2:30 PM",
-      "maxAssigned": 8
+      "maxAllowed": 8
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Wednesday, 2:30 PM",
-      "maxAssigned": 8
+      "maxAllowed": 8
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Thursday, 2:30 PM",
-      "maxAssigned": 8
+      "maxAllowed": 8
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Friday, 2:30 PM",
-      "maxAssigned": 8
+      "maxAllowed": 8
     },
     { 
-      "eventName": "Foggy",
+      "eventName": "Foggy Bottom",
       "time": "Saturday, 1:30 PM",
-      "maxAssigned": 9
+      "maxAllowed": 9
     },
 
 
 
     { 
-      "eventName": "Vernon",
+      "eventName": "Mount Vernon",
       "time": "Monday, 1:00 PM",
-      "maxAssigned": 3
+      "maxAllowed": 3
     },
     { 
-      "eventName": "Vernon",
+      "eventName": "Mount Vernon",
       "time": "Tuesday, 1:00 PM",
-      "maxAssigned": 3
+      "maxAllowed": 3
     },
     { 
-      "eventName": "Vernon",
+      "eventName": "Mount Vernon",
       "time": "Wednesday, 1:00 PM",
-      "maxAssigned": 3
+      "maxAllowed": 3
     },
     { 
-      "eventName": "Vernon",
+      "eventName": "Mount Vernon",
       "time": "Thursday, 1:00 PM",
-      "maxAssigned": 3
+      "maxAllowed": 3
     },
     { 
-      "eventName": "Vernon",
+      "eventName": "Mount Vernon",
       "time": "Friday, 1:00 PM",
-      "maxAssigned": 3
+      "maxAllowed": 3
     },
     { 
-      "eventName": "Vernon",
+      "eventName": "Mount Vernon",
       "time": "Saturday, 1:00 PM",
-      "maxAssigned": 3
+      "maxAllowed": 3
     }
   ]
 

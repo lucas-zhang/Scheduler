@@ -16,35 +16,35 @@ class Assignment:
     return '{\n        Assignment\n\n    Name: ' + self.firstName + ' ' + self.lastName + '\n    ' + 'Time: ' + str(self.assignedTourTime) + '\n\n}'
 
 class TourGuide:
-  def __init__(self, firstName, lastName, tourTimes):
+  def __init__(self, firstName, lastName, status, unassignedReason, tourTimes):
     #tourTimes is a list of TourTime objects
     self.firstName = firstName
     self.lastName = lastName
+    self.status = status
+    self.unassignedReason = unassignedReason
     self.tourTimes = tourTimes
-
 
   def __repr__(self):
     #for nice formatting when you print it
-    return self.jsonishPrint()
+    return self.indentedPrint()
 
-  def normalPrint(self):
-    return self.getFullName() + ': ' + str([tourTime for tourTime in self.tourTimes if tourTime])
-
-  def jsonishPrint(self):
+  def indentedPrint(self):
     tourTimesString = ''
     for i, tourTime in enumerate(self.tourTimes):
-      if tourTime:
-        tourTimesString += (str(tourTime)) 
-      
-        tourTimesString += '\n'
-        if i != self.countTourTimes() - 1:
-          tourTimesString += '    '
+      tourTimesString += (str(i + 1) + ': ' + str(tourTime)) 
+      tourTimesString += '\n'
+      if i != len(self.tourTimes) - 1:
+        tourTimesString += '        '
 
       
     if tourTimesString == '':
-      return '{\n    ' + 'Name: ' + self.getFullName() + '\n' + tourTimesString + '}'
+      return '{\n    ' + 'Name: ' + self.getFullName() + '\n    ' +  'Status: ' + \
+              self.status + '\n    ' + 'Reason: ' + self.unassignedReason + '\n    ' +  \
+              'Preferences: \n        '  + tourTimesString + '}'
 
-    return '{\n    ' + 'Name: ' + self.getFullName() + '\n    ' + tourTimesString + '}'
+    return '{\n    ' + 'Name: ' + self.getFullName() + '\n    ' + 'Status: ' +  self.status + \
+     '\n    ' + 'Reason: ' + str(self.unassignedReason) + '\n    ' + \
+     'Preferences: \n        ' + tourTimesString + '}'
 
 
   def getFullName(self):
@@ -58,7 +58,7 @@ class TourGuide:
     return count
 
 class TourTime:
-  def __init__(self,eventName, day, hour, minute, isAM, maxAllowed): 
+  def __init__(self, eventName, day, hour, minute, isAM, maxAllowed): 
     #Day is numbered 1-7; 1 being monday, isAM is true if it's am, false if pm
     self.eventName = eventName
     self.day = day
@@ -68,11 +68,25 @@ class TourTime:
     self.maxAllowed = maxAllowed
 
   # TourTime equals and not equals methods below
+
+  def convertToMinutes(self):
+    #converts a tourtime object to seconds with Monday 12:00AM as 0
+    hourMap = {} #maps (hour, isAM) -> hour in 24 hr time scheme
+    hourMap[(12, True)] = 0
+    hourMap[(12, False)] = 12
+
+    for hour in range(1, 12):
+      hourMap[(hour, True)] = hour
+      hourMap[(hour, False)] = (hour + 12)
+
+    return (self.day - 1) * 24 * 60 + hourMap[(self.hour, self.isAM)] * 60 + self.minute
+
+
   def __eq__(self, other):
     return self.__dict__ == other.__dict__
 
   def __hash__(self):
-    return hash((self.eventName, self.day, self.hour, self.minute, self.isAM, self.maxAssigned))
+    return hash((self.eventName, self.day, self.hour, self.minute, self.isAM, self.maxAllowed))
 
   def __ne__(self, other):
     return not self.__dict__ == other.__dict__
@@ -80,7 +94,8 @@ class TourTime:
   def __repr__(self):
     reverseDayMappings = {1:'Monday', 2: 'Tuesday', 3: 'Wednesday', 4:'Thursday', 5:'Friday', 6:'Saturday', 7:'Sunday'}
     am_pmMappings = {True: 'AM', False: 'PM'}
-    return reverseDayMappings[self.day] + ' ' + str(self.hour) + ':' + "{0:0=2d}".format(self.minute) + ' ' + am_pmMappings[self.isAM]
+    return reverseDayMappings[self.day] + ', ' + str(self.hour) + ':' + "{0:0=2d}".format(self.minute) + ' ' \
+          + am_pmMappings[self.isAM] + ' (' + self.eventName + ')'
   
 """ 
   *** Indices are 0 based *** 
@@ -135,7 +150,7 @@ def parseTimeString(timeStr):
     day = dayMappings[dayMatch.group().upper()]
     hour = int(timeMatch.groups()[0])
     minute = int(timeMatch.groups()[1])
-    isAM = timeMatch.groups()[2].upper()
+    isAM = timeMatch.groups()[2].upper() == 'AM'
 
     return (day, hour, minute, isAM)
 
@@ -143,43 +158,86 @@ def parseTimeString(timeStr):
   else:
     return None
 
-def createDistAndNameDict(jsonTimeObjects):
-  #a jsonTimeObject are similar but NOT the same as tourtime objects
+def createDistAndNameDict(jsonTourObjects):
+  #a jsonTourObject are similar but NOT the same as tourtime objects
 
-  distDict = {} #distDict maps (day, hour, minute, isAM) to (eventName, maxAssigned)  value for a time
+  distDict = {} #distDict maps (day, hour, minute, isAM) to (eventName, maxAllowed)  value for a time
 
-  for jsonTimeObject in jsonTimeObjects:
-    day = jsonTimeObject['day']
-    hour = jsonTimeObject['hour']
-    minute = jsonTimeObject['minute']
-    isAM = jsonTimeObject['isAM']
-    maxAllowed = jsonTimeObject['maxAllowed']
-    eventName = jsonTimeObject['eventName']
+  for jsonTourObject in jsonTourObjects:
+    timeTup = parseTimeString(jsonTourObject['time'])
+    if not timeTup:
+      continue
+    day, hour, minute, isAM = timeTup
+    maxAllowed = jsonTourObject['maxAllowed']
+    eventName = jsonTourObject['eventName']
     distDict[(day, hour, minute, isAM)] = (eventName, maxAllowed)
 
   return distDict
 
+def removeDuplicateTimes(tourTimes):
+  noDuplicates = []
+  counts = {}
 
-def getTourGuides(data, distDict, startRowInd = 1, fNameColInd = 1, lNameColInd = 18, firstPrefColInd = 13, numPrefCols = 5):
+  for tourTime in tourTimes:
+    if tourTime:
+      if tourTime not in counts:
+        noDuplicates.append(tourTime)
+        counts[tourTime] = 1
+    else:   
+      noDuplicates.append(None)
+    
+  return noDuplicates
+
+def getTourGuides(csv_data, distAndNameDict, input_csv_dict):
   # Will return a list of TourGuide objects
   tourGuides = []
-  
-  for i in range(startRowInd, len(data)):
-    row = data[i]
+
+  startRowInd = input_csv_dict['startRowInd']
+  fNameColInd = input_csv_dict['fNameColInd']
+  lNameColInd = input_csv_dict['lNameColInd']
+  firstPrefColInd = input_csv_dict['firstPrefColInd']
+  numPrefCols = input_csv_dict['numPrefCols']
+  statusColInd = input_csv_dict['statusColInd']
+
+  for i in range(startRowInd, len(csv_data)): #loops over the rows
+    row = csv_data[i]
     firstName = row[fNameColInd]
     lastName = row[lNameColInd]
+    status = row[statusColInd]
+
+    if firstName: 
+      firstName = firstName.strip()
+      firstName = firstName[0].upper() + firstName[1:]
+
+    if lastName: 
+      lastName = lastName.strip()
+      lastName = lastName[0].upper() + lastName[1:]
+
+    if status: status = status.strip()
+
     tourTimes = []
 
-    for j in range(firstPrefColInd, firstPrefColInd + numPrefCols):
+    for j in range(firstPrefColInd, firstPrefColInd + numPrefCols): #loops over preferences
+
       col = row[j]# A string of the first preference. For example "Saturday Morning Tour (11:00 AM)"
-      day, hour, minute, isAM = parseTimeString(col)
-      eventName, maxAllowed = distDict[(day, hour, minute, isAM)]
+
+
+      timeTup = parseTimeString(col)
+
+      if not timeTup:
+        tourTimes.append(None)
+        continue
+
+      day, hour, minute, isAM = timeTup
+      eventName, maxAllowed = distAndNameDict[(day, hour, minute, isAM)]
       tourTimes.append(TourTime(eventName, day, hour, minute, isAM, maxAllowed))
 
-    tourGuides.append(TourGuide(firstName, lastName, tourTimes))
+    uniqueTourTimes = removeDuplicateTimes(tourTimes)
+    tourGuides.append(TourGuide(firstName, lastName, status, None, uniqueTourTimes))
     i += 1
 
   return tourGuides
+
 
 def getAllTourTimes(tourGuides):
   tourTimes = set([])
@@ -191,7 +249,7 @@ def getAllTourTimes(tourGuides):
   return tourTimes
 
 
-def getPreferenceGroups (tourGuides, numPrefCols = 5):
+def getPreferenceGroups (tourGuides, numPrefCols):
   #prefGroups is an array of arrays that stores an array of tourGuide objects at each index corresponding to 
   #the tourGuides amount of preferences. For example all tourGuides with 2 preferences will be at index 2
 
@@ -250,9 +308,9 @@ def chooseRandomly(collection):
 
 def getLeastFullTime(tourGuide, currAssignCounts):
   """ Gets the most available time of a TourGuide based off the most availabe spots left according 
-      to maxAssigned
+      to maxAllowed
   """
-  timeDiffTuples = [(tourTime, tourTime.maxAssigned - currAssignCounts[tourTime]) for tourTime in tourGuide.tourTimes]
+  timeDiffTuples = [(tourTime, tourTime.maxAllowed - currAssignCounts[tourTime]) for tourTime in tourGuide.tourTimes]
   max_diff = max(timeDiffTuples, key = lambda t: t[1])[1]
   leastFullTimes = [tourTime for (tourTime, diff) in timeDiffTuples if diff == max_diff]
 
@@ -263,6 +321,7 @@ def handleUnassigned(prefGroup, leaveUnassigned, assigned, tourGuidesNotAssigned
   for tourGuide in prefGroup:
     if tourGuide not in assigned:
       if leaveUnassigned:
+        tourGuide.unassignedReason = 'No open spots according to the ideal distribution.'
         tourGuidesNotAssigned.append(tourGuide)
       else:
         selTourTime = getLeastFullTime(tourGuide, currAssignCounts)
@@ -273,7 +332,7 @@ def handleUnassigned(prefGroup, leaveUnassigned, assigned, tourGuidesNotAssigned
   return (assigned, tourGuidesNotAssigned, currAssignCounts)
 
 
-def generateAssignments(prefGroups, currAssignCounts,  margin = 0, leaveUnassigned = True):
+def generateAssignments(prefGroups, currAssignCounts,  margin, leaveUnassigned):
   """
     margin is the amount we can go over distribution
     ideal_dist is a dictionary mapping a tourtime object
@@ -286,6 +345,8 @@ def generateAssignments(prefGroups, currAssignCounts,  margin = 0, leaveUnassign
 
   assignments = [] #list of assignment objects
   tourGuidesNotAssigned = prefGroups[0]
+  for tourGuide in tourGuidesNotAssigned:
+    tourGuide.unassignedReason = 'No preferences given.'
   assigned = set([]) #set of assigned tourGuides
 
   for prefGroupNum, prefGroup in enumerate(prefGroups):
@@ -299,7 +360,7 @@ def generateAssignments(prefGroups, currAssignCounts,  margin = 0, leaveUnassign
     timeToGuideDict = getTourTimeToGuideMapping(prefGroup)
 
     for tourTime in sortedTourTimes: #sorted by frequency
-      if tourTime.currAssigned >= (currAssignCounts[tourTime] + margin):
+      if currAssignCounts[tourTime] >= (tourTime.maxAllowed + margin):
         continue
 
       guidePrefTuples = [(tourGuide, prefNum) for (tourGuide, prefNum) in timeToGuideDict[tourTime] if tourGuide not in assigned] #list of tuples (TourGuide, Preference number)
@@ -330,11 +391,112 @@ def generateAssignments(prefGroups, currAssignCounts,  margin = 0, leaveUnassign
 
 
 
-  return (assignments, tourGuidesNotAssigned)
+  return (assignments, assigned, tourGuidesNotAssigned)
 
 
-def generateOutputData(assignments, unassigned):
-  return
+
+def groupGuidesByAssignment(assignments):
+  assignmentMapping = {}
+  for assignment in assignments:
+    fullName = assignment.firstName + ' ' + assignment.lastName
+    if assignment.assignedTourTime not in assignmentMapping:
+      assignmentMapping[assignment.assignedTourTime] = []
+
+    assignmentMapping[assignment.assignedTourTime].append(fullName)
+
+  return assignmentMapping
+
+
+
+def generateSortedTourTimeSlots(jsonTourObjects):
+  outputTourTimes = []
+  for jsonTourObject in jsonTourObjects:
+    timeTup = parseTimeString(jsonTourObject['title'])
+    if not timeTup:
+      day, hour, minute, isAM = (None, None, None, None)
+    else:
+      day, hour, minute, isAM = timeTup
+
+    maxAllowed = jsonTourObject['maxAllowed']
+    eventName = jsonTourObject['eventName']
+
+    outputTourTimes.append(TourTime(eventName, day, hour, minute, isAM, maxAllowed))
+
+  return outputTourTimes
+
+def generateUnassignedOutput(unassigned):
+  #generates a list of (tourGuide name, status, unassignedReason) and sorts it
+  unassignedTuples = []
+  for tourGuide in unassigned:
+    unassignedTuples.append((tourGuide.getFullName(), tourGuide.status, tourGuide, unassignedReason))
+
+
+  return unassignedTuples
+
+def generateHeaderRow(tourTimeSlots):
+  headerRow = ['Unassigned Tour Guide', 'Status', 'Reason', None]
+  for tourTimeSlot in tourTimeSlots: 
+    headerRow.append(str(tourTimeSlot))
+
+  return headerRow
+
+def findMaxColLength(assignmentMapping, unassignedTuples):
+  maxAssigned = 0 # the number of people assigned to the tourtime with the most people
+
+  for tourTime in assignmentMapping:
+    numAssigned = len(assignmentMapping[tourTime])
+    if numAssigned > maxAssigned:
+      maxAssigned = numAssigned
+
+  return max(maxAssigned, len(unassignedTuples))
+
+def generateOutputRows(assignments, unassigned, sortByFirst, toursList):
+  output_rows = []
+
+  assignmentMapping = groupGuidesByAssignment(assignments)
+  unassignedTuples = generateUnassignedOutput(unassigned)
+
+  if sortByFirst:
+    assignedSort = lambda s: s
+    unassignedSort = lambda t: t[0]
+
+  else:
+    assignedSort = lambda s: s.split(' ')[1]
+    unassignedSort = lambda t: t[0].split(' ')[1]
+
+  unassignedTuples.sort(key = unassignedSort)
+
+  for k in assignmentMapping:
+    assignmentMapping[k].sort(key = assignedSort)
+
+
+  tourTimeSlots = generateTourTimeSlots(toursList)
+  tourTimeSlots.sort(key = lambda tourTime: tourTime.convertToMinutes())
+
+  headerRow = generateHeaderRow(tourTimeSlots)
+
+  output_rows.append(headerRow)
+  maxColLength = findMaxColLength(assignmentMapping, unassignedTuples)
+
+  for i in range(maxColLength):
+    curr_row = []
+    for field in unassignedTuples[i]:
+      curr_row.append(field)
+
+    curr_row.append(None) #column break between unassigned and actual assigned
+    for tourTimeSlot in tourTimeSlots:
+      curr_row.append(assignmentMapping[tourTimeSlot][i])
+
+    output_rows.append(curr_row)
+
+  return output_rows
+
+
+
+    
+  
+
+
 def outputToCSV(file_string, outputData):
   with open (file_string, 'w') as f:
     writer = csv.writer(f)
@@ -344,27 +506,41 @@ def outputToCSV(file_string, outputData):
   f.close()
   return
 
-
+def checkUniqueness(assigned, unassigned):
+  for tourGuide in unassigned:
+    if tourGuide in assigned:
+      return False
+  return True
 
 def main():
   input_csv_string = sys.argv[1]
-  json_file_string = sys.argv[2]
-  output_csv_string = sys.argv[3]
+  output_csv_string = sys.argv[2]
+  json_file_string = sys.argv[3]
 
 
-  data = readCSVFile(input_csv_string)
-  for (row in data):
-    print (data)
+  input_csv_data = readCSVFile(input_csv_string)
   jsonConfigDict = readJSONFile(json_file_string)
-  print(jsonConfigDict)
 
-  distAndNameDict = createDistAndNameDict(jsonConfigDict['tour_times'])
 
-  tourGuides = getTourGuides(data)
-  prefGroups = getPreferenceGroups(tourGuides)
+
+  distAndNameDict = createDistAndNameDict(jsonConfigDict['tours'])
+
+  tourGuides = getTourGuides(input_csv_data, distAndNameDict, jsonConfigDict['input_csv_options'])
+  prefGroups = getPreferenceGroups(tourGuides, jsonConfigDict['input_csv_options']['numPrefCols'])
   tourTimes = getAllTourTimes(tourGuides) # a set
   currAssignCounts = dict.fromkeys(tourTimes, 0)
-  assignments, unassigned = generateAssignments(prefGroups, 0, True, currAssignCounts)
+  margin = jsonConfigDict['margin']
+  leaveUnassigned = jsonConfigDict['leaveUnassigned']
+  assignments, assigned, unassigned = generateAssignments(prefGroups, currAssignCounts, margin, leaveUnassigned)
+
+
+  assignmentMapping = groupGuidesByAssignment(assignments, jsonConfigDict['sortByFirst'])
+  for k in assignmentMapping:
+    print(assignmentMapping[k])
+
+  print(checkUniqueness(assigned, unassigned))
+  print(len(assignments) + len(unassigned))
+
 
 
 
