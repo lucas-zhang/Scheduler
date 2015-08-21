@@ -392,11 +392,6 @@ def generateAssignments(prefGroups, currAssignCounts,  margin, leaveUnassigned):
     assigned, tourGuidesNotAssigned, currAssignCounts = handleUnassigned(prefGroup, leaveUnassigned, assigned, \
                                                                   tourGuidesNotAssigned, currAssignCounts)
 
-
-
-
-
-
   return (assignments, assigned, tourGuidesNotAssigned)
 
 
