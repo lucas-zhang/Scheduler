@@ -3,41 +3,68 @@ import os.path
 import sys
 import re
 
-rePattern = '^.+\.(json)$' #regex for .json
+
 
 enterNewFileStr = '\nPlease enter a different file path with extension .json to receive output:'
+enterValidRes = 'Please enter a valid response (yes or no).'
 
-def getNoOverwriteRes(path):
-  return 'You did NOT want to overwrite ' + path + '. ' + enterNewFileStr
+getAbsPathErrorRes = lambda path: 'There was an issue trying to write to "' + path + '". "' \
+                              + path + '" is an invalid absolute path name.'
 
-def getEnterValidRes(path):
-  return 'Please enter a valid response (yes or no).\nThe file "' + path + \
+def getNoWriteRes(path, overwrite):
+  if overwrite:
+    return 'You did NOT want to overwrite ' + path + '. ' + enterNewFileStr
+
+  return 'You did not want to write (NO overwrite neede) json data to "' + path + '".\n' + enterNewFileStr
+
+
+def getWarningRes(path, overwrite, isValid):
+  overwriteRes = '\nThe file "' + path + \
         '" already exists.\nIf you continue, it will be overwritten.\nDo you want to continue? Enter yes or no:'
 
-def getTemplateRes(overwrite, path):
+  normalWriteRes = '\nDo you want to write data to "' + path + \
+        '"? No overwrite will be needed. Enter yes or no.'
+
+  if not isValid:
+    overwriteRes = enterValidRes + overwriteRes
+    normalWriteRes = enterValidRes + normalWriteRes
+
+  if overwrite:
+    return overwriteRes 
+
+  return normalWriteRes
+
+def getTemplateRes(path, overwrite):
   if overwrite:
     return 'Now creating your template. Overwriting ' + path + '...'
 
   return 'Now creating your template. No overwrite of ' + path + ' needed...'
+
+def getConfirmRes(path, overwrite):
+  if overwrite:
+    return 'Are you sure you want to overwrite ' + path + '? Enter yes or no:'
+
+  return 'Are you sure you want to write data to "' + path + \
+        '"? No overwrite will be needed. Enter yes or no.'
 
 
 
 class OverWriteState: # state after prompt says "Do you want to overwrite?"
   def handleInput(self, stdInput, currPath): 
     stdInput = stdInput.strip()
-
+    overwrite = True
     if stdInput == 'yes':
-      response = 'Are you sure you want to overwrite ' + currPath + '? Enter yes or no:'
+      response = getConfirmRes(currPath, overwrite)
       nextState = ConfirmOverWriteState()
       validPath = currPath
 
     elif stdInput == 'no':
-      response = getNoOverwriteRes(currPath)
+      response = getNoWriteRes(currPath, overwrite)
       nextState = EnterFileState()
       validPath = None
 
     else:
-      response = getEnterValidRes(currPath)
+      response = getWarningRes(currPath, overwrite, False)
       nextState = OverWriteState()
       validPath = currPath
 
@@ -52,20 +79,23 @@ class OverWriteState: # state after prompt says "Do you want to overwrite?"
 
 
 class EnterFileState: # state after prompt says "Please enter file"
-  def handleInput(self, stdInput, currPath): #prevPath isn't used, but it's just there so I can call handleInput without knowing what state
+  def handleInput(self, stdInput, currPath = None): #currPath isn't used, but it's just there so I can call handleInput without knowing what state
     stdInput = stdInput.strip()
+    absPath = os.path.abspath(stdInput)
+    rePattern = '^([^\s]*\.)(json)$' #regex for .json
 
     if re.match(rePattern, stdInput): #if file is .json
-      if os.path.isfile(stdInput):
-        response = 'The file entered "' + stdInput + \
-        '" already exists.\nIf you continue, it will be overwritten.\nDo you want to continue? Enter yes or no:'
+      if os.path.isfile(absPath):
+        overwrite = True
+        response = getWarningRes(stdInput, overwrite, True)
         nextState = OverWriteState()
         validPath = stdInput
 
-      else:
-        response = getTemplateRes(False, stdInput)
-        nextState = DoneState()
-        validPath = stdInput
+      else: #either valid path, but doesn't exist yet or an absolute path that isn't valid (check later)
+          overwrite = False
+          response = getConfirmRes(stdInput, overwrite)
+          nextState = ConfirmNormalWriteState()
+          validPath = stdInput
 
     else:
       response = 'The file you entered "' + stdInput + '" has no name or does not have extension .json.' + enterNewFileStr
@@ -80,23 +110,49 @@ class EnterFileState: # state after prompt says "Please enter file"
   def __repr__(self):
     return 'EnterFileState'
 
-class ConfirmOverWriteState: # state after prompt says "Are you sure you want to overwrite again?"
+
+class ConfirmNormalWriteState: #state after prompt says "Are you sure you want to write to the file, no overwrite needed?"
   def handleInput(self, stdInput, currPath):
+    overwrite = False
     stdInput = stdInput.strip()
 
     if stdInput == 'yes':
-      response = getTemplateRes(True, currPath)
+      response = getTemplateRes(stdInput, overwrite)
+      nextState = DoneState()
+      validPath = currPath
+
+    elif stdInput == 'no':
+      response = getNoWriteRes(currPath, overwrite)
+      nextState = EnterFileState()
+      validPath = None
+
+    else:
+      response = getWarningRes(currPath, overwrite, False)
+      nextState = ConfirmNormalWriteState()
+      validPath = currPath
+
+    return (response, nextState, validPath)
+  def isDone(self):
+    return False
+
+class ConfirmOverWriteState: # state after prompt says "Are you sure you want to overwrite again?"
+  def handleInput(self, stdInput, currPath):
+    overwrite = True
+    stdInput = stdInput.strip()
+
+    if stdInput == 'yes':
+      response = getTemplateRes(currPath, overwrite)
       nextState = DoneState()
       validPath = currPath
 
 
     elif stdInput == 'no':
-      response = getNoOverwriteRes(currPath)
+      response = getNoWriteRes(currPath, overwrite)
       nextState = EnterFileState()
       validPath = None
 
     else:
-      response = getEnterValidRes(currPath)
+      response = getWarningRes(currPath, overwrite, False)
       nextState = ConfirmOverWriteState()
       validPath = currPath
 
@@ -164,15 +220,31 @@ def makeTemplate(path, jsonDict):
 
 
 
+def openStream(state):
+  curr_state = state
+  validPath = None
+  stdInput = enteredPath
+
+  while True: 
+    response, nextState, validPath = curr_state.handleInput(stdInput, validPath)
+    print('\n' + response + '\n')
+
+    if nextState.isDone():
+      break
+
+    stdInput = sys.stdin.readline()
+    curr_state = nextState
+
+  jsonDict = createJsonData(numTours)
+  makeTemplate(validPath, jsonDict)
+  return 
+
 def main():
   enteredPath = sys.argv[1]
   try:
     numTours = int(sys.argv[2])
   except ValueError:
     numTours = 15
-
-  absPath = os.path.normpath(os.path.join(os.getcwd(), enteredPath))
-
 
   curr_state = EnterFileState()
   validPath = None
@@ -190,6 +262,9 @@ def main():
 
   jsonDict = createJsonData(numTours)
   makeTemplate(validPath, jsonDict)
+
+
+
 
   print('Your template has been created. Check "' + validPath + '" to view it.') 
 
