@@ -220,10 +220,11 @@ def makeTemplate(path, jsonDict):
 
 
 
-def openStream(state):
-  curr_state = state
+def openStream(curr_state):
   validPath = None
+  enteredPath = sys.argv[1]
   stdInput = enteredPath
+
 
   while True: 
     response, nextState, validPath = curr_state.handleInput(stdInput, validPath)
@@ -235,30 +236,19 @@ def openStream(state):
     stdInput = sys.stdin.readline()
     curr_state = nextState
 
-  jsonDict = createJsonData(numTours)
-  makeTemplate(validPath, jsonDict)
-  return 
+
+  return validPath
 
 def main():
-  enteredPath = sys.argv[1]
+
   try:
     numTours = int(sys.argv[2])
   except ValueError:
     numTours = 15
 
   curr_state = EnterFileState()
-  validPath = None
-  stdInput = enteredPath
+  validPath = openStream(curr_state)
 
-  while True: 
-    response, nextState, validPath = curr_state.handleInput(stdInput, validPath)
-    print('\n' + response + '\n')
-
-    if nextState.isDone():
-      break
-
-    stdInput = sys.stdin.readline()
-    curr_state = nextState
 
   jsonDict = createJsonData(numTours)
   makeTemplate(validPath, jsonDict)

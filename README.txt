@@ -55,9 +55,9 @@ II. Higher Level Overview and Algorithm Explained:
 
 
 III. How to Use:
-        You need 3 files to run this program: 1) scheduler.py(the main script), 2) a config.json which encodes in some input options, output options, and data, and 3) a .csv file with name (not extension) of choice with the relevant problem at hand and correct relevant columns and rows that you placed in config.json. Please look at config.json as an example and make sure not to change any of the key names in the json file, but only values. I'll also be writing a template.py file which will create a json file where you just have to fill in the values of the json file.
+        You need 3 files to run this program: 1) scheduler.py(the main script), 2) a .json which encodes in some input options, output options, and data, and 3) an input.csv file with the relevant problem at hand and correct relevant columns and rows that you placed in .json. Please look at example_config.json as an example and make sure not to change any of the key names in the json file, but only values. I'll also be writing a jsonTemplater.py file which will create a json file where you just have to fill in the values of the json file.
 
-        To run this file, make sure that scheduler.py, config.json, the .csv file as input are in the same directory. For this example let's just say the input .csv file is called input.csv. Then from terminal do the following (*** Note that the .csv you supply as the output will be overwritten if it already exists, so make sure it doesn't have anything important or that it's not in your directory in the first place. ***):
+        To run this file, make sure that scheduler.py, the .json file, and the .csv file as input are in the same directory. For this example let's just say the input .csv file is called input.csv and the .json is called config.json. Then from terminal do the following (*** Note that the .csv you supply as the output will be overwritten if it already exists, so make sure it doesn't have anything important or that it's not in your directory in the first place. ***):
 
                             $ python scheduler.py input.csv output.csv config.json
 
@@ -86,7 +86,7 @@ IV. More about your .json file:
     -sortByFirst is a boolean parameter indicating whether to sort output by first name (sortByFirst: true) or last name (sortByFirst: false) 
 
 
-    Also, I included an example with fake data called spring2015.csv file that is compatible with the config.json file, so if you're really having trouble with the json file, you can look in there also to see how the json matches it. 
+
 
 
 
