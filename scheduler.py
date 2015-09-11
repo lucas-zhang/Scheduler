@@ -264,11 +264,14 @@ def getPreferenceGroups (tourGuides, numPrefCols):
   #prefGroups is an array of arrays that stores an array of tourGuide objects at each index corresponding to 
   #the tourGuides amount of preferences. For example all tourGuides with 2 preferences will be at index 2
 
-  prefGroups = [[]] * (numPrefCols + 1)
+  prefGroups = []
+  for i in range(numPrefCols + 1):
+    prefGroups.append([]);
+
+  
   for tourGuide in tourGuides:
     numTourGuidePref = tourGuide.countTourTimes()
     prefGroups[numTourGuidePref].append(tourGuide)
-
   return prefGroups
 
 
@@ -352,6 +355,7 @@ def generateAssignments(prefGroups, currAssignCounts,  margin, leaveUnassigned):
 
   assignments = [] #list of assignment objects
   tourGuidesNotAssigned = prefGroups[0]
+
   for tourGuide in tourGuidesNotAssigned:
     tourGuide.unassignedReason = 'No preferences given.'
   assigned = set([]) #set of assigned tourGuides
@@ -478,8 +482,13 @@ def generateOutputRows(assignments, unassigned, sortByFirst, toursList):
 
   for i in range(maxColLength):
     curr_row = []
-    for field in unassignedTuples[i]:
-      curr_row.append(field)
+
+    if (i < len(unassignedTuples)):
+      for field in unassignedTuples[i]:
+        curr_row.append(field)
+    else:
+      for j in range(3):
+        curr_row.append("")
 
     curr_row.append(None) #column break between unassigned and actual assigned
     for tourTimeSlot in tourTimeSlots:
@@ -509,7 +518,6 @@ def checkUniqueness(assigned, unassigned):
   return True
 
 def main():
-  print("main entered")
   input_csv_string = sys.argv[1]
   output_csv_string = sys.argv[2]
   json_file_string = sys.argv[3]
