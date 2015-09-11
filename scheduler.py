@@ -205,6 +205,7 @@ def getTourGuides(csv_data, distAndNameDict, input_csv_dict):
   numPrefCols = input_csv_dict['numPrefCols']
   statusColInd = input_csv_dict['statusColInd']
 
+
   for i in range(startRowInd, len(csv_data)): #loops over the rows
     row = csv_data[i]
     firstName = row[fNameColInd]
@@ -227,7 +228,6 @@ def getTourGuides(csv_data, distAndNameDict, input_csv_dict):
 
       col = row[j]# A string of the first preference. For example "Saturday Morning Tour (11:00 AM)"
 
-
       timeTup = parseTimeString(col)
 
       if not timeTup:
@@ -235,7 +235,12 @@ def getTourGuides(csv_data, distAndNameDict, input_csv_dict):
         continue
 
       day, hour, minute, isAM = timeTup
-      eventName, maxAllowed = distAndNameDict[(day, hour, minute, isAM)]
+      try: 
+        eventName, maxAllowed = distAndNameDict[(day, hour, minute, isAM)]
+      except KeyError:
+        currTourTime = TourTime("", day, hour, minute, isAM, "")
+        print(str(currTourTime) + " is in the csv, but not in the JSON! Please fix the csv or JSON. The first instance of this in row " + str(i) + ", column " + str(j) + " (0 indexed)!");
+        sys.exit(1);
       tourTimes.append(TourTime(eventName, day, hour, minute, isAM, maxAllowed))
 
     uniqueTourTimes = removeDuplicateTimes(tourTimes)
@@ -259,13 +264,9 @@ def getPreferenceGroups (tourGuides, numPrefCols):
   #prefGroups is an array of arrays that stores an array of tourGuide objects at each index corresponding to 
   #the tourGuides amount of preferences. For example all tourGuides with 2 preferences will be at index 2
 
-  prefGroups = [None] * (numPrefCols + 1)
+  prefGroups = [[]] * (numPrefCols + 1)
   for tourGuide in tourGuides:
     numTourGuidePref = tourGuide.countTourTimes()
-
-    if not prefGroups[numTourGuidePref]:
-      prefGroups[numTourGuidePref] = []
-
     prefGroups[numTourGuidePref].append(tourGuide)
 
   return prefGroups
@@ -356,9 +357,6 @@ def generateAssignments(prefGroups, currAssignCounts,  margin, leaveUnassigned):
   assigned = set([]) #set of assigned tourGuides
 
   for prefGroupNum, prefGroup in enumerate(prefGroups):
-    if not prefGroup:
-      continue
-
     if prefGroupNum == 0:
       continue
 
@@ -511,6 +509,7 @@ def checkUniqueness(assigned, unassigned):
   return True
 
 def main():
+  print("main entered")
   input_csv_string = sys.argv[1]
   output_csv_string = sys.argv[2]
   json_file_string = sys.argv[3]
